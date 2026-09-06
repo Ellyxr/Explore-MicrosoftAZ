@@ -1,4 +1,5 @@
 # Azure Student Starter
+## Start on Section 2!
 
 A small full-stack monorepo for learning Azure:
 
