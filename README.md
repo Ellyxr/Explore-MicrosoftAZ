@@ -33,7 +33,7 @@ On macOS/Linux, use `cp client/.env.example client/.env` and `cp server/.env.exa
 
 ## 2. Push to GitHub
 
-Create an empty GitHub repository, then from this folder run:
+Create an empty GitHub repository, then create a folder on your computer and run:
 
 ```bash
 git init
