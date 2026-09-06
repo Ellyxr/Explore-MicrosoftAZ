@@ -74,8 +74,27 @@ Do not commit `.env` files. They are ignored; only `.env.example` files belong i
 >> Name: VITE_API_BASE_URL
 >>  
 >> Secret: Your API URL from Section 4!
+>
+>> Name: AZURE_STATIC_WEB_APPS_API_TOKEN
+>
+>> Secret: In your static web app > Overview > Click Manage Deployment Token > Copy and paste here
 
-8. Push a change to `main` or rerun the client workflow from the GitHub **Actions** tab. Open the generated `https://YOUR-STATIC-APP.azurestaticapps.net` URL.
+>> Sidenote: You might need to check your Static web url again on azure and update your secreat at some point.
+
+8. Go back to your code editor and type in the terminal:
+> git fetch ; git pull 
+
+Then create a small change and push it to `main` or rerun the client workflow from the GitHub **Actions** tab. Open the generated `https://YOUR-STATIC-APP.azurestaticapps.net` URL.
+
+> How to push:
+>> git add .
+>
+>> git commit -m "Your msg here"
+>
+>> git push
+>
+>> Before proceeding, go to Section 4 | Step 7
+
 9. Click **Call /api/hello**. If the browser reports a CORS error, update the App Service `CORS_ORIGINS` value to the exact Static Web Apps URL, save, and restart the API.
 
 ## 4. Deploy the Express API to App Service Free
@@ -102,16 +121,122 @@ Do not commit `.env` files. They are ignored; only `.env.example` files belong i
    - `WEBSITE_NODE_DEFAULT_VERSION` = `22`
 
 
-
-
 8. Select **Save**, then open **Configuration > Stack settings**. Set **Startup Command** to `npm start`, save, and restart the app.
-9. Open **Deployment Center**, choose **GitHub**, authorize GitHub, select the repository and `main` branch, and choose **App Service build service**. For the monorepo path, set the application/source path to `/server` if the screen offers it. Save the configuration.
-10. If Deployment Center does not offer a path field, use the included workflow instead: in the app's **Overview**, select **Get publish profile**, download the file, and add its complete contents to a GitHub repository secret named `AZUREAPPSERVICE_PUBLISHPROFILE`. Also add `AZURE_WEBAPP_NAME` with the Web App name. The workflow at `.github/workflows/deploy-server.yml` then deploys the `server` folder on pushes to `main`.
+9. Open **Deployment Center**, choose **GitHub**, authorize GitHub, select the repository and `main` branch. 
+
+10. In the app's **Overview**, select **Download publish profile** and add its complete contents to a GitHub repository secret named `AZUREAPPSERVICE_PUBLISHPROFILE`. Also add `AZURE_WEBAPP_NAME` with the Web App name. The workflow at `.github/workflows/deploy-server.yml` then deploys the `server` folder on pushes to `main`.
+
+> If you cannot download publish profile > Go to Settings > Click Configuration > check "SCM Basic Auth..." and try step 9 again
+
 11. Test the API in a browser: `https://YOUR-APP.azurewebsites.net/api/hello`. It should return JSON.
 
 The backend uses `CORS_ORIGINS` as a comma-separated allowlist. For the first deployment, use exactly the Static Web Apps hostname. Do not add a trailing slash.
 
+## Ideal End Result
+[![image-2026-09-06-205548570.png](https://i.postimg.cc/d14zs7P4/image-2026-09-06-205548570.png)](https://postimg.cc/xJNsg1dz)
 
+If you see this, **GREAT JOB!** Now you know how to deploy a website on Microsoft Azure!
+
+## Troubleshooting
+
+### The API URL says `Cannot GET /`
+
+That is expected. The Express server does not define a route for `/`. Test these routes instead:
+
+```text
+https://YOUR-APP.azurewebsites.net/health
+https://YOUR-APP.azurewebsites.net/api/hello
+```
+
+The first should return `{"status":"ok"}`. Open the React frontend from its Static Web Apps URL, not from the API URL.
+
+### The frontend tries `localhost:3000`
+
+The production frontend was built without the Azure API URL. In GitHub, open **Settings > Secrets and variables > Actions** and create or update the repository secret named `VITE_API_BASE_URL`. Its value should be the complete App Service URL, including `https://` and without a trailing slash.
+
+Then rerun **Actions > Deploy client to Azure Static Web Apps** on the `main` branch and hard-refresh the browser. The `client/.env.example` value may remain `http://localhost:3000`; that file is only a local-development template.
+
+### The browser reports a CORS error
+
+Set the App Service application setting `CORS_ORIGINS` to the exact Static Web Apps frontend URL:
+
+```text
+CORS_ORIGINS=https://YOUR-STATIC-APP.azurestaticapps.net
+```
+
+Include `https://` and do not add a trailing slash. `CORS_ORIGINS` is the frontend URL; `VITE_API_BASE_URL` is the backend URL. Save the setting and restart the App Service.
+
+### The API returns `503 Service Unavailable`
+
+This means the App Service process is not running. Check **App Service > Configuration > General settings**:
+
+```text
+Startup command: npm start
+Runtime stack: Node 22 LTS
+```
+
+Also confirm `SCM_DO_BUILD_DURING_DEPLOYMENT` is `true`, save the settings, and restart the app. Test `/health` directly before testing the frontend.
+
+### The app reports `ContainerStartupFailure`
+
+The deployed server package must contain these files at its application root:
+
+```text
+package.json
+src/index.js
+```
+
+For the included GitHub Actions workflow, confirm the App Service deployment step uses:
+
+```yaml
+package: ./server
+```
+
+The workflow must deploy the `server` folder, not only the repository root or the `client` folder.
+
+### Log Stream says `No instances found` or returns `403 Site Disabled`
+
+Azure has no running App Service instance. Check **App Service > Overview** and select **Start** if the app is stopped. Check the linked App Service plan is active and still uses `F1 Free`. Check the **Activity log** for subscription, quota, policy, or provisioning errors.
+
+If the site remains disabled, create a new resource group and retry in another region allowed by your subscription. Never switch to a paid tier just to bypass this error.
+
+### Azure says no available instances or blocks the region
+
+The subscription policy and App Service capacity are separate from your application. A region can be allowed but temporarily lack capacity for your plan. Try a new resource group, wait and retry, or choose another region from Azure's allowed-region list. Before creating the resource, verify the pricing tier is `F1 Free` and the estimated cost is `$0`.
+
+### GitHub Actions cannot find `main`
+
+Push the branch and at least one commit to GitHub:
+
+```bash
+git branch -M main
+git push -u origin main
+```
+
+Refresh Azure's GitHub connection and confirm you have write access to the repository. The repository must contain the workflow files under `.github/workflows/`.
+
+### Static Web Apps deployment says `deployment_token was not provided`
+
+Create the repository secret named `AZURE_STATIC_WEB_APPS_API_TOKEN`. Get the value from the Static Web App's **Overview > Manage deployment token** page. Do not put the token in the README, source code, or chat.
+
+### App Service deployment says `Site Disabled (403)` or no deployment is found
+
+First make sure the App Service is running. Then confirm these GitHub repository secrets exist with the exact names:
+
+```text
+AZURE_WEBAPP_NAME
+AZUREAPPSERVICE_PUBLISHPROFILE
+```
+
+The publish profile is sensitive deployment information. Do not commit it or share its contents. If Basic Authentication is disabled, temporarily enable **SCM Basic Auth Publishing Credentials** under **Configuration > General settings**, download a new profile, update the GitHub secret, and disable Basic Authentication again after deployment.
+
+### The API deployment succeeds but the app still shows an old version
+
+Open GitHub **Actions** and confirm the latest workflow run succeeded. Restart the App Service, then test `/health` and `/api/hello` directly. For the frontend, rerun its workflow after changing `VITE_API_BASE_URL`, because Vite embeds that value during the build.
+
+### I did everything but it still says Error 503
+
+You might need to check if you have met your status quota on Overview. By this point, you can choose to scale up your Resource group to B1 just to see if it works, and downgrade to a free plan after confirming.
 
 ## 5. Environment variables
 
