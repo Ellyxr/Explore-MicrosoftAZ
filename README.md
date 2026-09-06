@@ -57,15 +57,24 @@ Do not commit `.env` files. They are ignored; only `.env.example` files belong i
 ## 3. Deploy the Vite client to Static Web Apps Free
 1. In the Azure portal, select **Create a resource**, search for **Static Web App**, and select **Create**.
 2. Choose the same subscription and resource group. Enter a unique name, and select the **Free** plan.
-3. Under **Deployment details**, choose **GitHub**, authorize GitHub, and select this repository and the `main` branch.
+3. Under **Deployment details**, choose **GitHub**, authorize GitHub, and select this repository and the `main` branch. Click Review + Create, then click Basics.
 4. In **Build details**, set:
-   - **Build Presets**: `Custom`
+   - **Build Presets**: `(detected)`
    - **App location**: `/client`
    - **Api location**: leave blank
    - **Output location**: `dist`
-5. Create the Static Web App. Azure adds a GitHub Actions workflow. This repository also includes `.github/workflows/deploy-client.yml`; keep one client workflow, not both.
-6. In the Static Web App, open **Configuration > Application settings**, add `VITE_API_BASE_URL` with the full API URL, for example `https://YOUR-APP.azurewebsites.net`, and save.
+5. Create the Static Web App. Azure adds a GitHub Actions workflow. This repository also includes `.github/workflows/deploy-client.yml`; Go home. Click Static Web Apps, then your created app.
+
+ > Jump to Section 4 before proceeding, and go back here after getting your API URL upon completing Section 4 | Step 6.
+
+6. In the Static Web App, open **Settings > Environment Variables**, add `VITE_API_BASE_URL` with the full API URL, for example `https://YOUR-APP.azurewebsites.net`, and save.
 7. Because Vite environment variables are compiled into static files, also add a GitHub repository secret named `VITE_API_BASE_URL` with that same URL. The included workflow uses the secret during the build.
+
+> Open Github > Go to your repository > Click Settings > Under Security and Quality section, click Secrets and Variables > Add new secret 
+>> Name: VITE_API_BASE_URL
+>>  
+>> Secret: Your API URL from Section 4!
+
 8. Push a change to `main` or rerun the client workflow from the GitHub **Actions** tab. Open the generated `https://YOUR-STATIC-APP.azurestaticapps.net` URL.
 9. Click **Call /api/hello**. If the browser reports a CORS error, update the App Service `CORS_ORIGINS` value to the exact Static Web Apps URL, save, and restart the API.
 
@@ -80,6 +89,11 @@ Do not commit `.env` files. They are ignored; only `.env.example` files belong i
 
 5. For **Linux Plan**, create a new plan and open its pricing tier. Select **F1 (Free)**, then verify the summary says **Free** before selecting it.
 6. Select **Review + create**, verify the estimated cost is `0`, then create the app.
+
+> If you were not able to get ur API URL. Go Home > Resource > Click your app > Copy Default Domain. 
+
+> Go back to Section 3 | Step 5
+
 7. In the Web App, open **Settings > Environment Variables** and add:
 
 
